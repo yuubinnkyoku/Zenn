@@ -3,7 +3,7 @@ title: "Codonで競プロするときのPythonとの違い・注意点"
 emoji: "🐍"
 type: "tech"
 topics: ["codon", "python", "atcoder", "競技プログラミング"]
-published: false
+published: true
 ---
 
 # 入出力・基礎機能
