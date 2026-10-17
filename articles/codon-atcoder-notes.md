@@ -1,8 +1,11 @@
 ---
-title: "Codonで競プロするときのPythonとの違い・注意点"
-emoji: "🐍"
-type: "tech"
-topics: ["codon", "python", "atcoder", "競技プログラミング"]
+title: AtCoder テンプレ Codon
+emoji: 📝
+type: tech
+topics:
+- atcoder
+- codon
+- kyopro
 published: true
 ---
 
@@ -79,10 +82,17 @@ f=1 if k in a else 0 # k in aがTrueの時1、Falseのとき0
 floor(x)
 ceil(x)
 ```
+## 添字と中身を同時に回す
+リストでも文字列でも
+インデックスと中身を同時に1文字で回せる
+```python
+for i, x in enumerate(a):
+    # i: 添字
+    # x: a[i]
+```
+
 ## 二次元配列の転置、90°回転
 ```python
-# NumPyを使わずリスト内包表記で書く例
-h, w = 3, 3
 # 転置 (Transpose)
 matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 transposed = [[row[i] for row in matrix] for i in range(w)]
@@ -250,6 +260,7 @@ b = deepcopy(a)
 Codonの int はPythonの無限桁整数ではなく、基本は64bit符号付き整数。
 そのため 1 << 100 みたいな巨大bit集合はPython感覚で使わない方がよい。
 競プロなら n <= 60 程度のbit集合は扱いやすい。
+bit演算は`+`とか`-`より優先順位が低いので注意
 
 ```python
 x & y # AND
@@ -271,6 +282,7 @@ a <<= 2 # a = a << 2
 a >>= 1 # a = a >> 1
 
 # i bit目が立っているか見る
+# 一番右が0bit目
 x = 13 # 1101
 i = 2
 if (x >> i) & 1:
@@ -295,6 +307,9 @@ x = 15 # 1111
 i = 1
 x ^= 1 << i
 print(x) # 1101 -> 13
+
+# i bit目を j にする
+x = (x & ~(1 << i)) | (j << i)
 
 # 部分集合列挙
 s = 13 # 1101
@@ -332,6 +347,15 @@ sub=101000の次に小さいのは
 ```python
 bin(x) # 10進数 -> 2進数文字列  0bがつく
 int(s, 2) # 2進数文字列 -> 10進数
+```
+
+## 対数関数
+```python
+import math
+
+math.log(x, y) # log_y x
+math.log10(x)
+math.log2(x)
 ```
 # 基礎アルゴリズム
 
@@ -374,6 +398,11 @@ while left <= right:
 ```
 leftが指すところは絶対にFalse、rightが指すところは絶対にTrueのように意識するとバグらせにくい
 doubleの二分探索は浮動小数点数誤差でバグりやすいので、forで十分な回数を指定してやると良い
+あとCodonの場合出力時にf-stringで
+```python
+print(f"{mid:.15f}")
+```
+のようにしないと勝手に丸められる
 
 ## アルファベット一覧、しゃくとり法
 
@@ -686,8 +715,10 @@ def find_cycle_undirected(n, graph):
     cycle.reverse()
 
     return cycle
-  ```
+```
+
   - DFS(サイクル検出・復元) 有向グラフ
+
 ```python
 # 有向グラフのサイクル検出・復元
 # 戻り値: サイクルの頂点列
@@ -922,19 +953,25 @@ while pq:
 			heapq.heappush(pq, (dist[v], v))
 ```
 
-## Union Find
+## Union Find（DSU）
+`find(x)`：償却 $O(\alpha(N))$
+`union(x, y)`：償却 $O(\alpha(N))$
+`is_same(x, y)`：償却 $O(\alpha(N))$
+初期化 ：$O(N)$
 
-Codonはクラス（`class`）を構造体のように効率的にコンパイルします。再帰を使う場合は `sys.setrecursionlimit` が効かない場合があるので、経路圧縮を反復的（ループ）に書くと安全です。
+$\alpha(N)$ は逆アッカーマン関数。増え方が異常に遅く、$N=10^{100}$ でも4なので、ほぼ$O(1)$
+
+大きい木の根に小さい木の根をくっつける(マージテク)・長いやつは1つずつ直接根に付け替える(経路解析)で超高速になる
+
 集合の結合と代表値の取得、同じ集合に含まれているか判定などができる
-
 ```python
 class UnionFind:
     par: list[int]
-    rank: list[int]
+    size: list[int]
 
     def __init__(self, n: int):
-        self.par = [i for i in range(n)]
-        self.rank = [0] * n
+        self.par = [i for i in range(n)] #親
+        self.size = [1] * n
 
     def find(self, x: int) -> int:
         root = x
@@ -948,27 +985,117 @@ class UnionFind:
             curr = parent
         return root
 
-    def union(self, x: int, y: int):
+    def union(self, x: int, y: int) -> bool:
         root_x = self.find(x)
         root_y = self.find(y)
-        if root_x != root_y:
-            if self.rank[root_x] < self.rank[root_y]:
-                root_x, root_y = root_y, root_x
-            if self.rank[root_x] == self.rank[root_y]:
-                self.rank[root_x] += 1
-            self.par[root_y] = root_x
+
+        if root_x == root_y:
+            return False
+
+        if self.size[root_x] < self.size[root_y]:
+            root_x, root_y = root_y, root_x
+
+        self.par[root_y] = root_x
+        self.size[root_x] += self.size[root_y]
+
+        return True
 
     def is_same(self, x: int, y: int) -> bool:
         return self.find(x) == self.find(y)
 
+    def get_size(self, x: int) -> int:
+        return self.size[self.find(x)]
+    
+    def groups(self) -> list[list[int]]:
+	    groups = [[] for _ in range(len(self.par))]
+	
+	    for i in range(len(self.par)):
+	        groups[self.find(i)].append(i)
+	
+	    return [group for group in groups if group]
 
-n_uf, m_uf = 5, 3
-uf = UnionFind(n_uf + 1)
-queries = [[1, 2], [5, 4], [4, 1]]
-for u, v in queries:
-    uf.union(u, v)
 
-print(uf.is_same(1, 5)) # True
+
+uf = UnionFind(n)
+uf.union(u, v)
+uf.is_same(0, 4)
+```
+
+## Kruskal法（最小全域木）
+頂点数N、辺数Mで
+計算量 O(M log M)
+コストが小さい辺から確定させ、サイクルは飛ばす
+```python
+class UnionFind:
+    par: list[int]
+    size: list[int]
+
+    def __init__(self, n: int):
+        self.par = [i for i in range(n)]
+        self.size = [1] * n
+
+    def find(self, x: int) -> int:
+        root = x
+        while self.par[root] != root:
+            root = self.par[root]
+
+        curr = x
+        while curr != root:
+            parent = self.par[curr]
+            self.par[curr] = root
+            curr = parent
+
+        return root
+
+    def union(self, x: int, y: int) -> bool:
+        root_x = self.find(x)
+        root_y = self.find(y)
+
+        if root_x == root_y:
+            return False
+
+        if self.size[root_x] < self.size[root_y]:
+            root_x, root_y = root_y, root_x
+
+        self.par[root_y] = root_x
+        self.size[root_x] += self.size[root_y]
+
+        return True
+
+    def is_same(self, x: int, y: int) -> bool:
+        return self.find(x) == self.find(y)
+
+    def get_size(self, x: int) -> int:
+        return self.size[self.find(x)]
+    
+    def groups(self) -> list[list[int]]:
+	    groups = [[] for _ in range(len(self.par))]
+	
+	    for i in range(len(self.par)):
+	        groups[self.find(i)].append(i)
+	
+	    return [group for group in groups if group]
+
+
+n, m = [int(_) for _ in input().split()]
+
+edges = []
+
+for _ in range(m):
+    u, v, cost = [int(_) for _ in input().split()]
+    edges.append((cost, u - 1, v - 1))
+
+edges.sort()
+
+uf = UnionFind(n)
+
+ans = 0
+
+for cost, u, v in edges:
+    if uf.union(u, v):
+        ans += cost
+
+print(ans)
 ```
 ## LCA（最小共通祖先）
 木上で、2頂点 `u, v` の最小共通祖先を高速に求めます。  
@@ -1106,7 +1233,7 @@ l.sort(key=cmp_to_key(cmp))
 ```
 ちなみにx,yにはそれぞれlの1つの要素が来るので、2次元リスト的なやつとかまで割といい感じに処理できる
 
-## エラトステネスの篩(素数列挙)、素因数分解
+## エラトステネスの篩（素数列挙）、素因数分解
 
 エラトステネスの篩→$O(n \log \log n)$
 ```python
@@ -1167,10 +1294,10 @@ def prime_factorize(m: int, spf: list[int]):
     return pf
 ```
 - Miller–Rabin素数判定 + Brent版Pollard Rho
-[[Miller–Rabin素数判定 + Brent版Pollard Rho 素因数分解]]
+[Miller–Rabin素数判定 + Brent版Pollard Rho 素因数分解](https://zenn.dev/yuubinnkyoku/articles/miller-rabin)
 小さい方の素因数を `p` とすると、平均 `O(√p)`
 $10^{18}$ぐらいの馬鹿でかい数用
-## 最大公約数(GCD)、itertools、Counter、n進数変換
+## 最大公約数（GCD）、itertools、Counter、n進数変換
 
 Codonでは `math.gcd` が使えます（fractionsは非推奨）。
 `itertools` もサポートされていますが、順列などは再帰関数やforループで書いても十分高速です。
@@ -1404,7 +1531,7 @@ def floor_sum(n: int, m: int, a: int, b: int) -> int:
 
 # 累積和・動的計画法
 
-## 累積和、動的計画法(DP)
+## 累積和、動的計画法（DP）
 
 Codonの真骨頂です。PythonだとTLEするような3重ループDPでも、CodonならC++同様に通ることが多いです。
 
@@ -1515,7 +1642,7 @@ if __name__ == "__main__":
 
 # データ構造・文字列
 
-## ランレングス圧縮(RLE)
+## ランレングス圧縮（RLE）
 
 連続する同じ文字・同じ大小関係・同じ状態をまとめる手法です。`<<<>>>` のような符号列、`00011100` のような文字列、連続区間ごとの処理でよく使います。
 
@@ -1553,7 +1680,7 @@ def rle_list(a: list[int]) -> list[tuple[int, int]]:
         l = r
     return res
 ```
-## Manacher(回文判定)
+## Manacher（回文判定）
 文字列中の各位置を中心とする最長回文をそれぞれ求める $O(N)$
 - `odd[i]`：`s[i]` を中心とする回文の個数、最長の半径(中心も含む)
 長さは `2 * odd[i] - 1`
@@ -1620,9 +1747,10 @@ def is_palindrome(l: int, r: int, odd: list[int], even: list[int]) -> bool:
 ```python
 palindrome_count = sum(odd) + sum(even)
 ```
-## 優先度付きキュー(heapq)
+## 優先度付きキュー（heapq）
 
-`deque` は入れた順番、`heapq` は値の大小順で取り出すためのものです。最小値を何度も取り出す問題で使います。最大値を取りたいときはマイナスを入れます。
+`deque` は入れた順番、`heapq` は値の大小順で取り出すためのものです。最小値を何度も取り出す問題で使います。最大値を取りたいときは-1倍する。
+pushもpopも$O(\log{N})$
 
 ```python
 import heapq
@@ -1726,7 +1854,7 @@ for i, ch in enumerate(s):
 
 セグ木とは違い、挿入・削除できるが範囲の〇〇には弱い
 長いので
-[[SortedSet(Codon) Code]]
+SortedSet(Codon) Code
 ↑Ctrl押しながらでプレビュー、コピーできる
 
 ほとんどの操作が $O(\sqrt N)$ である
