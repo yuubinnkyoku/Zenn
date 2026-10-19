@@ -418,13 +418,11 @@ print(f"{mid:.15f}")
 al = [chr(97 + i) for i in range(26)]
 ```
 ## 尺取り法
-
-左右の端点をそれぞれ一方向に動かし、連続部分列を効率的に調べる手法
 区間の更新を $O(1)$ でできれば、全体で $O(N)$ 
-端点を一方向に動かしても必要な区間を見落とさない単調性があることが条件
+単調性があることが条件
+片方をforで固定して、もう片方をwhileで1ずつ増やしていく感じ
 
-- 区間和がK以下
-配列の要素がすべて非負のとき、和が $K$ 以下の連続部分列の個数や最大長を $O(N)$ で求められる
+- 区間和がK以下(すべて非負)の例
 ```python
 def shakutori(a: list[int], k: int):
     n = len(a)
@@ -432,17 +430,13 @@ def shakutori(a: list[int], k: int):
     s = 0
     cnt = 0
     length = 0
-
     for r in range(n):
         s += a[r]  # 右端を伸ばす
-
         while s > k:  # 条件を満たすまで左端を縮める
             s -= a[l]
             l += 1
-
         cnt += r - l + 1
         length = max(length, r - l + 1)
-
     return cnt, length
 
 
