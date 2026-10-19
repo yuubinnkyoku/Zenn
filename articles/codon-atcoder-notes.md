@@ -9,6 +9,9 @@ topics:
 published: true
 ---
 
+```
+# https://zenn.dev/yuubinnkyoku/articles/codon-atcoder-notes より
+```
 # 入出力・基礎機能
 
 ## 入出力、format関数
@@ -404,7 +407,7 @@ print(f"{mid:.15f}")
 ```
 のようにしないと勝手に丸められる
 
-## アルファベット一覧、しゃくとり法
+## アルファベット一覧
 
 `str.maketrans` / `translate` はCodonのバージョンによっては未実装または挙動が異なる可能性があるため、辞書を使った置換が無難です。
 
@@ -413,28 +416,44 @@ print(f"{mid:.15f}")
 # ord('a') -> 97
 # chr(97) -> 'a'
 al = [chr(97 + i) for i in range(26)]
-
-# しゃくとり法
-# 辞書のデフォルト値処理は defaultdict を使うとCodonでも楽です
-from collections import defaultdict
-
-def shakutori(n, a):
-    res = 0
-    right = 0
-    m = defaultdict(int)
-    for left in range(n):
-        while right < n and m[a[right]] == 0:
-            m[a[right]] += 1
-            right += 1
-        if right - left > res:
-            res = right - left
-        if left == right:
-            right += 1
-        else:
-            m[a[left]] -= 1
-    return res
 ```
+## 尺取り法
 
+左右の端点をそれぞれ一方向に動かし、連続部分列を効率的に調べる手法
+区間の更新を $O(1)$ でできれば、全体で $O(N)$ 
+端点を一方向に動かしても必要な区間を見落とさない単調性があることが条件
+
+- 区間和がK以下
+配列の要素がすべて非負のとき、和が $K$ 以下の連続部分列の個数や最大長を $O(N)$ で求められる
+```python
+def shakutori(a: list[int], k: int):
+    n = len(a)
+    l = 0
+    s = 0
+    cnt = 0
+    length = 0
+
+    for r in range(n):
+        s += a[r]  # 右端を伸ばす
+
+        while s > k:  # 条件を満たすまで左端を縮める
+            s -= a[l]
+            l += 1
+
+        cnt += r - l + 1
+        length = max(length, r - l + 1)
+
+    return cnt, length
+
+
+a = [2, 1, 3, 2, 1]
+print(shakutori(a, 4))  # (8, 2)
+```
+`l`：区間の左端（含む）
+`r`：区間の右端（含む）
+`s`：現在の区間和
+`cnt`：条件を満たす区間の総数
+`length`：条件を満たす区間の最大長
 ## 座標圧縮(座圧)
 
 ```python
@@ -1561,7 +1580,45 @@ for i in range(N_item):
 
 print(dp[N_item][W_limit])
 ```
+## 累積min/max
+右端・左端からの区間について、最小値・最大値を高速に取得できる。
+任意の区間 `[l, r)` を指定することはできないのでスパーステーブルや値を更新したい場合はセグ木で代替できる。
+前処理 $O(N)$、問い合わせ $O(1)$、空間計算量 $O(N)$
+```python
+class Acc:
+    def __init__(self, a, f, unit):
+        n = len(a)
+        self.n = n
+        self.left = [unit] * (n + 1)
+        self.right = [unit] * (n + 1)
+        for i in range(n):self.left[i + 1] = f(self.left[i], a[i])
+        for i in range(n - 1, -1, -1):self.right[i] = f(a[i], self.right[i + 1])
+    def __getitem__(self, s):
+        if s.step is not None:raise ValueError("step is not supported")
+        if s.start is None:
+			r = self.n if s.stop is None else max(0, min(s.stop, self.n))
+            return self.left[r]
+        if s.stop is not None:raise ValueError("only [:r] or [l:] is supported")
+        l = max(0, min(s.start, self.n))
+        return self.right[l]
 
+
+a = [3, 2, 5, 1, 4]
+
+amin = Acc(a, min, 10**18)
+amax = Acc(a, max, -(10**18))
+
+print(amin[:3])  # 2
+print(amin[2:])  # 1
+print(amin[:])   # 1
+
+print(amax[:3])  # 5
+print(amax[2:])  # 5
+print(amax[:])   # 5
+```
+
+`unit` は単位元。`min` なら十分大きな値、`max` なら十分小さな値を指定する。
+`f` は結合律を満たす二項演算であればよく、`min`・`max` のほか、`math.gcd` なども利用できる。
 ## いもす法、2次元いもす法
 
 区間加算を毎回全マスに反映するとTLEする場合、差分配列に端だけ記録して最後に累積和を取ります。
