@@ -569,38 +569,18 @@ Codonはクラスや辞書の扱いも高速です。`deque` は `collections` �
 
 - DFS (Stack)
 ```python
-n = 7
-adj = [
-    [1, 2, 3], # 0
-    [0],       # 1
-    [5, 0],    # 2
-    [6, 0],    # 3
-    [6],       # 4
-    [2],       # 5
-    [3, 4]     # 6
-]
+n=7
+graph=[]
 
-def dfs_stack(start_node, n_nodes, graph):
-    # 訪問済み管理: Falseで初期化
+def dfs_stack(start, n, graph):
     # 距離が必要なら dist = [-1] * n_nodes などにする
-    visited = [False] * n_nodes
-    
-    # スタックの初期化
-    stack = [start_node]
-    
-    # 探索開始時処理
-    visited[start_node] = True
-    print(f"Visit: {start_node}") 
+    visited = [False] * n
+    stack = [start]
+    visited[start] = True
+    print(f"Visit: {start}") 
 
     while stack:
-        u = stack.pop() # 末尾から取り出す (LIFO)
-        
-        # --- ここで行きがけの処理を行う場合もある ---
-        # print(f"Processing {u}") 
-
-        # 隣接頂点を探索
-        # 注意: スタックに入れる順序と取り出す順序は逆になるため
-        # 順序が重要な場合は graph[u][::-1] にするか、あらかじめソートしておく
+        u = stack.pop()
         for v in graph[u]:
             if not visited[v]:
                 visited[v] = True
@@ -608,7 +588,7 @@ def dfs_stack(start_node, n_nodes, graph):
                 # --- ここで追加時の処理 ---
                 print(f"Found: {v} (from {u})")
 
-dfs_stack(0, n, adj)
+dfs_stack(0, n, graph)
 ```
 - DFS(Stack)+経路復元
 ```python
@@ -1224,6 +1204,7 @@ w.sort()
 w.sort(key=lambda x: x[1], reverse=True) #2つ目の数で降順ソート
 ```
 別のリストを連動させたい場合は一度上のようにtupleのlistにしてからソートするなど
+
 - バブルソート
 …swapし続けるやつ
 転倒数回だけswapすると必ずソートできる（1回swapすると必ず1つ減るので）
