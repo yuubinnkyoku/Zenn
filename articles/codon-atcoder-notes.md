@@ -1374,7 +1374,7 @@ int(s, 2) # 2進数文字列 -> 10進数
 割り算→逆元をかけるだけ
 逆元が存在する必要十分条件は、`gcd(a,MOD)==1`
 ```python
-#pow(y, -1, MOD) Codonでは動かない
+#pow(y,-1,mod) Codonでは動かない
 def modinv(a: int, m: int) -> int:
     a %= m
     x, y = a, m
