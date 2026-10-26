@@ -450,7 +450,7 @@ print(shakutori(a, 4))  # (8, 2)
 `s`：現在の区間和
 `cnt`：条件を満たす区間の総数
 `length`：条件を満たす区間の最大長
-## 座標圧縮(座圧)
+## 座標圧縮（座圧）
 
 ```python
 def zaatu(arr: list[int]) -> list[int]:
@@ -564,7 +564,7 @@ for i in range(n - 1):
     graph[a].append(b)
     graph[b].append(a)
 ```
-## 深さ探索(DFS)
+## 深さ探索（DFS）
 Codonはクラスや辞書の扱いも高速です。`deque` は `collections` からインポートします。
 
 - DFS (Stack)
@@ -769,7 +769,7 @@ def find_cycle_directed(n, graph):
 
     return cycle
 ```
-## 幅探索(BFS)
+## 幅探索（BFS）
 
 重みがないとき
 
@@ -1557,6 +1557,46 @@ for i in range(N_item):
 
 print(dp[N_item][W_limit])
 ```
+## メモ化再帰
+- PyPy
+```python
+from functools import cache
+import sys
+sys.setrecursionlimit(10**6)
+
+@cache
+def fib(n):
+    if n <= 1:
+        return n
+    return fib(n-1) + fib(n-2)
+
+print(fib(10))
+```
+`@cache`は自動的に辞書にメモ化してくれるが、Codonでは使えない
+
+- Codon
+深さ制限がない
+```python
+memo: dict[tuple[int, int, int], int] = {}
+
+def dp(a: int, b: int, t: int) -> int:
+    key = (a, b, t)
+
+    if key in memo:
+        return memo[key]
+
+    # 終了条件
+    # if ...:
+    #     return ...
+
+    res = 0
+
+    # 状態遷移
+    # res += dp(...)
+
+    memo[key] = res
+    return res
+```
 ## 累積min/max
 右端・左端からの区間について、最小値・最大値を高速に取得できる。
 任意の区間 `[l, r)` を指定することはできないのでスパーステーブルや値を更新したい場合はセグ木で代替できる。
@@ -1636,7 +1676,7 @@ for j in range(w):
 
 ans = [[diff[i][j] for j in range(w)] for i in range(h)]
 ```
-## 最長増加部分列(LIS)
+## 最長増加部分列（LIS）
 
 DPで解ける
 ```python
