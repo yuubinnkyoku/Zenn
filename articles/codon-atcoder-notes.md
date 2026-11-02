@@ -1713,12 +1713,12 @@ if __name__ == "__main__":
     main()
 ```
 
-
 # データ構造・文字列
-## BIT（Binary Indexed Tree/Fenwick Tree）
-あとから値を変更するのが$O(\log N)$な累積和。
-区間和取得はその代わりに$O(\log N)$になる。
-転倒数や座標圧縮と組み合わせた個数管理などにも利用できる。
+## BIT（Fenwick Tree）、転倒数
+- BIT: Binary Indexed Tree
+あとから値を変更するのが$O(\log N)$で速い累積和
+区間和取得はその代わりに$O(\log N)$になる
+転倒数や座標圧縮と組み合わせた個数管理などにも利用できる
 ```python
 class BIT:
     n: int
@@ -1740,9 +1740,9 @@ class BIT:
     def sum(self, l: int, r: int) -> int:
         return self.prefix_sum(r) - self.prefix_sum(l)
 ```
-- `add(i, x)`：`a[i]` に `x` を加算する
-- `prefix_sum(r)`：`a[0:r]` の和を求める
-- `sum(l, r)`：`a[l:r]` の和を求める
+`add(i, x)`：`a[i]` に `x` を加算する
+`prefix_sum(r)`：`a[0:r]` の和を求める
+`sum(l, r)`：`a[l:r]` の和を求める
 ```python
 a = [3, 1, 4, 1, 5]
 bit = BIT(len(a))
@@ -1756,13 +1756,42 @@ print(bit.prefix_sum(3)) # 8 (3+1+4)
 
 bit.add(2, 10)          # a[2] += 10
 print(bit.sum(1, 4))    # 16
-```
 
-```python
 i & -i  # 最下位の1だけを取り出す
 ```
 更新時には `i += i & -i`、累積和取得時には `i -= i & -i` とすることで、必要な区間だけをたどれる。
 各操作の計算量は $O(\log N)$、空間計算量は $O(N)$
+
+- 転倒数
+BITでO(logN)で求められる
+BITに各値が何回出現したかを記録し、それまでに現れた$A_i$以下の要素数を引いていく
+座標圧縮の$O(N\log N)$がボトルネック 
+```python
+def inversion_count(a: list[int]) -> int:
+    # 座標圧縮
+    vals = sorted(set(a))
+    rank = {x: i for i, x in enumerate(vals)}
+
+    bit = BIT(len(vals))
+    ans = 0
+
+    for i, x in enumerate(a):
+        p = rank[x]
+
+        # 既に登場した要素のうち、xより大きいもの
+        ans += i - bit.prefix_sum(p + 1)
+
+        # xが1個登場したことを記録
+        bit.add(p, 1)
+
+    return ans
+
+
+print(inversion_count([3, 1, 4, 1, 5]))  # 3
+print(inversion_count([5, 4, 3, 2, 1]))  # 10
+print(inversion_count([1, 1, 1]))        # 0
+```
+ちなみにマージソートでもできる
 ## ランレングス圧縮（RLE）
 
 連続する同じ文字・同じ大小関係・同じ状態をまとめる手法です。`<<<>>>` のような符号列、`00011100` のような文字列、連続区間ごとの処理でよく使います。
