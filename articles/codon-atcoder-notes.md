@@ -1792,12 +1792,133 @@ print(inversion_count([5, 4, 3, 2, 1]))  # 10
 print(inversion_count([1, 1, 1]))        # 0
 ```
 ちなみにマージソートでもできる
+## Mo法（Mo's algorithm）
+「区間に関する複雑な質問が大量にあって、区間を1要素ずつ伸縮させると楽」な問題(具体的には出現回数に関係するもの)に使う
+配列の変更がなく、すべてのクエリを先に読み込める場合（オフライン）である必要がある
+
+> [!仕組み]
+> 
+> 例えば、配列の区間 `[l, r)` に対して「異なる値が何種類あるか」を何度も求めたいとする。
+> 各クエリで区間全体を調べると、計算量は $O(NQ)$ になる。
+> しかし、直前に調べた区間を保持しておけば、左右の端を動かすだけで次の区間に移れる。
+> 例えば、`[1, 5)` → `[2, 6)`は
+> - 左端の要素を1つ削除
+> - 右端の要素を1つ追加
+> 
+> だけで次の区間の状態を作れる。
+> 問題は、クエリの順番によっては左右の端が大きく移動してしまうこと。
+> 
+> そこで、左端を幅 $B\approx\sqrt N$ のブロックに分割し、以下の順番でクエリを処理する。
+> 
+> 1. 左端が属するブロックの昇順
+> 2. 同じブロック内では右端の昇順
+> 3. ただし、奇数番目のブロックでは右端の降順にする（蛇行順）
+> これにより、端の移動回数を抑えられる。
+
+区間に要素を1つ追加・削除する操作が $O(1)$ なら、$O((N+Q)N+Qlog⁡Q)$ で全クエリを処理できる。
+- $O(Q\log Q)$：クエリの並べ替え
+- $O((N+Q)\sqrt N)$：区間の移動
+空間計算量は、以下の実装では $O(N+Q)$
+
+- 実装例（区間内のユニークな値の個数を数えたい場合）
+実はクエリを右端で並べ替えてBITを使えば $O((N+Q)\log N)$ で求められる
+`add(i)` で要素を追加し、`remove(i)` で要素を削除する
+```python
+class MoDistinct:
+    def __init__(self, a: list[int]):
+        # 座標圧縮
+        vals = sorted(set(a))
+        rank = {x: i for i, x in enumerate(vals)}
+        self.a = [rank[x] for x in a]
+
+        self.cnt = [0] * len(vals)
+        self.distinct = 0
+
+    def add(self, i: int):
+        x = self.a[i]
+        if self.cnt[x] == 0:
+            self.distinct += 1
+        self.cnt[x] += 1
+
+    def remove(self, i: int):
+        x = self.a[i]
+        self.cnt[x] -= 1
+        if self.cnt[x] == 0:
+            self.distinct -= 1
+
+
+def mo_distinct(
+    a: list[int],
+    queries: list[tuple[int, int]]
+) -> list[int]:
+
+    n = len(a)
+    q = len(queries)
+    if q == 0:
+        return []
+
+    block = max(1, int(n ** 0.5))
+
+    # (ブロック番号, 右端, クエリ番号)
+    order = []
+    for i, (l, r) in enumerate(queries):
+        b = l // block
+        order.append((b, r if b % 2 == 0 else -r, i))
+
+    order.sort()
+
+    mo = MoDistinct(a)
+    ans = [0] * q
+
+    left, right = 0, 0
+
+    for _, _, i in order:
+        l, r = queries[i]
+
+        while left > l:
+            left -= 1
+            mo.add(left)
+
+        while right < r:
+            mo.add(right)
+            right += 1
+
+        while left < l:
+            mo.remove(left)
+            left += 1
+
+        while right > r:
+            right -= 1
+            mo.remove(right)
+
+        ans[i] = mo.distinct
+
+    return ans
+```
+
+使用例：
+```python
+a = [3, 1, 4, 1, 5]
+
+queries = [
+    (0, 5),
+    (1, 4),
+    (2, 3),
+    (2, 2)
+]
+
+print(mo_distinct(a, queries))
+# [4, 2, 1, 0]
+```
+
+`MoDistinct` の `add`、`remove` と保持する答えを書き換えることで、別の種類の区間クエリにも応用できる。
+クエリを事前に並べ替える必要があるので、入力された順に即座に答えを返す用途には向かない。    
+ 配列の更新を含む問題の場合は、時間方向も管理する拡張版があるのでそれを使う。
 ## ランレングス圧縮（RLE）
 
 連続する同じ文字・同じ大小関係・同じ状態をまとめる手法です。`<<<>>>` のような符号列、`00011100` のような文字列、連続区間ごとの処理でよく使います。
 
 - 文字列の圧縮
-
 ```python
 def rle(s: str) -> list[tuple[str, int]]:
     n = len(s)
