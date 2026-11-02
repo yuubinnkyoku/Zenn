@@ -1763,6 +1763,85 @@ i & -i  # 最下位の1だけを取り出す
 ```
 更新時には `i += i & -i`、累積和取得時には `i -= i & -i` とすることで、必要な区間だけをたどれる。
 各操作の計算量は $O(\log N)$、空間計算量は $O(N)$
+## Mo法（Mo's algorithm）
+配列を変更せず、区間クエリを**すべて先に読み込める（オフライン）**場合に使える手法。
+クエリを左端のブロック（幅は約 $\sqrt{N}$）、右端の順に並べ替え、直前の区間から左右の端を1つずつ動かして答えを更新する。
+右端はブロックごとに昇順・降順を交互にすると移動量を抑えられる（蛇行順）。
+
+区間への1要素の追加・削除を $O(1)$ で行えるなら、クエリの並べ替えが $O(Q\log Q)$、区間の移動が合計 $O((N+Q)\sqrt{N})$。
+**区間和だけなら累積和やBITの方が簡単**だが、区間内の異なる値の個数などで便利。
+
+- クエリは0始まり・半開区間 `[l, r)`
+- `left, right` は現在管理している区間 `[left, right)` を表す
+- 元の順番で答えを返すため、クエリ番号 `i` も一緒にソートする
+- 以下は区間内の**異なる値の個数**を求める例（座標圧縮つき）
+
+```python
+class MoDistinct:
+    def __init__(self, a: list[int]):
+        vals = sorted(set(a))
+        rank = {x: i for i, x in enumerate(vals)}
+        self.a = [rank[x] for x in a]
+        self.cnt = [0] * len(vals)
+        self.distinct = 0
+
+    def add(self, i: int):
+        x = self.a[i]
+        if self.cnt[x] == 0:
+            self.distinct += 1
+        self.cnt[x] += 1
+
+    def remove(self, i: int):
+        x = self.a[i]
+        self.cnt[x] -= 1
+        if self.cnt[x] == 0:
+            self.distinct -= 1
+
+
+def mo_distinct(a: list[int], queries: list[tuple[int, int]]) -> list[int]:
+    n = len(a)
+    q = len(queries)
+    if q == 0:
+        return []
+
+    block = max(1, int(n ** 0.5))
+    order = []
+    for i, (l, r) in enumerate(queries):
+        b = l // block
+        order.append((b, r if b % 2 == 0 else -r, i))
+    order.sort()
+
+    mo = MoDistinct(a)
+    ans = [0] * q
+    left = 0
+    right = 0
+
+    for _, _, i in order:
+        l, r = queries[i]  # [l, r)
+        while left > l:
+            left -= 1
+            mo.add(left)
+        while right < r:
+            mo.add(right)
+            right += 1
+        while left < l:
+            mo.remove(left)
+            left += 1
+        while right > r:
+            right -= 1
+            mo.remove(right)
+        ans[i] = mo.distinct
+    return ans
+
+
+a = [3, 1, 4, 1, 5]
+queries = [(0, 5), (1, 4), (2, 3)]
+print(mo_distinct(a, queries))  # [4, 2, 1]
+```
+
+区間の種類を変えたい場合は、`MoDistinct` の `add`・`remove`（および保持する答え）を書き換える。
+通常のMo法はクエリの途中に配列の値が変化する場合にはそのまま使えない。
+
 ## ランレングス圧縮（RLE）
 
 連続する同じ文字・同じ大小関係・同じ状態をまとめる手法です。`<<<>>>` のような符号列、`00011100` のような文字列、連続区間ごとの処理でよく使います。
