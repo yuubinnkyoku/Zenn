@@ -1194,6 +1194,103 @@ for i in range(m):
         graph[super_node].append((v, c))
 ```
 このように、`u -> 超頂点` か `超頂点 -> v` のどちらかで`c`を加算する
+## 木の直径
+
+木の直径 = 木の中の2頂点間の距離の最大値。
+
+- 重みなし：通る辺の本数
+- 重み付き：通る辺の重みの総和
+
+**任意の頂点から最も遠い頂点を探し、その頂点からもう一度最も遠い頂点を探すと、木の直径が求まる。**
+
+探索2回なのでO(n)
+
+- 重みなし（BFS 2回）
+```python
+from collections import deque
+
+# graph: 0-indexedの無向木の隣接リスト
+# 戻り値: 最遠頂点、距離配列、親配列
+def farthest(start, graph):
+    n = len(graph)
+    dist = [-1] * n
+    prev = [-1] * n
+    dist[start] = 0
+    q = deque([start])
+
+    while q:
+        u = q.popleft()
+        for v in graph[u]:
+            if dist[v] != -1:
+                continue
+            dist[v] = dist[u] + 1
+            prev[v] = u
+            q.append(v)
+
+    far = start
+    for i in range(n):
+        if dist[i] > dist[far]:
+            far = i
+
+    return far, dist, prev
+
+
+# 木の直径
+a, _, _ = farthest(0, graph)
+b, dist, prev = farthest(a, graph)
+
+diameter = dist[b]
+print(diameter)
+```
+経路復元
+```python
+# a → b の経路（0-indexed）
+path = []
+v = b
+while v != -1:
+    path.append(v)
+    v = prev[v]
+
+path.reverse()
+print(path)
+```
+
+- 重み付き（DFS 2回）
+辺の重みが非負のときだけ
+
+```python
+# graph[u] = [(v, w), ...]
+# v: 隣接頂点、w: 辺の重み
+def farthest_weighted(start, graph):
+    n = len(graph)
+    dist = [0] * n
+    parent = [-1] * n
+    parent[start] = start
+    stack = [start]
+
+    while stack:
+        u = stack.pop()
+        for v, w in graph[u]:
+            if parent[v] != -1:
+                continue
+            parent[v] = u
+            dist[v] = dist[u] + w
+            stack.append(v)
+
+    far = start
+    for i in range(n):
+        if dist[i] > dist[far]:
+            far = i
+
+    return far, dist
+
+
+a, _ = farthest_weighted(0, graph)
+b, dist = farthest_weighted(a, graph)
+
+diameter = dist[b]
+print(diameter)
+```
 
 # 数学・数え上げ
 ## ソート
