@@ -1710,7 +1710,7 @@ class Acc:
     def __getitem__(self, s):
         if s.step is not None:raise ValueError("step is not supported")
         if s.start is None:
-			r = self.n if s.stop is None else max(0, min(s.stop, self.n))
+            r = self.n if s.stop is None else max(0, min(s.stop, self.n))
             return self.left[r]
         if s.stop is not None:raise ValueError("only [:r] or [l:] is supported")
         l = max(0, min(s.start, self.n))
