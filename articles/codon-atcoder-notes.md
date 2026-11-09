@@ -2009,7 +2009,53 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+## 最長共通部分列（LCS）
+2つの文字列に共通する部分列のうち、最も長いものを求める
+`dp[i][j]`=`s`の先頭`i`文字と`t`の先頭`j`文字でできるLCSの長さ
+として遷移し、復元すると解ける
 
+$dp[0][j] = dp[i][0] = 0$で、
+ `s[i-1]` と `t[j-1]`が一致する場合 → $dp[i][j] = dp[i-1][j-1]+1$
+一致しない場合 → $dp[i][j] = \max(dp[i-1][j],dp[i][j-1])$
+と遷移する
+
+復元は、`i=len(s)`,`j=len(t)`から始めて
+- $dp[i-1][j]=dp[i][j]$ なら、`s[i-1]` を使わなくても同じ長さを達成できるので、$i$ を1減らす。
+- $dp[i][j-1]=dp[i][j]$ なら、`t[j-1]` を使わなくても同じ長さを達成できるので、$j$ を1減らす。
+- どちらでもなければ、`s[i-1]` と `t[j-1]` が一致しているはずなので、その文字を答えに追加して斜め左上へ移動する。
+```python
+s = input()
+t = input()
+n = len(s)
+m = len(t)
+
+dp = [[0]*(m+1) for _ in range(n+1)]
+
+# LCSの長さを求める
+for i in range(1, n+1):
+    for j in range(1, m+1):
+        if s[i-1] == t[j-1]:
+            dp[i][j] = dp[i-1][j-1]+1
+        else:
+            dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+
+# LCSを復元する
+i, j = n, m
+ans = []
+
+while i > 0 and j > 0:
+    if dp[i-1][j] == dp[i][j]:
+        i -= 1
+    elif dp[i][j-1] == dp[i][j]:
+        j -= 1
+    else:
+        ans.append(s[i-1])
+        i -= 1
+        j -= 1
+
+ans.reverse()
+print("".join(ans))
+```
 # データ構造・文字列
 ## BIT（Fenwick Tree）、転倒数
 - BIT: Binary Indexed Tree
