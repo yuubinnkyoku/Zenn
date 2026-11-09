@@ -1776,6 +1776,203 @@ for j in range(w):
 
 ans = [[diff[i][j] for j in range(w)] for i in range(h)]
 ```
+## 2次元累積和
+
+$H\times W$ の二次元配列 `a` に対し、`s[i][j]` を左上からの長方形領域 $[0,i)\times[0,j)$ の総和とする。
+$$
+s[i+1][j+1]
+=a[i][j]+s[i][j+1]+s[i+1][j]-s[i][j]
+$$
+これを使うと、$[r_1,r_2)\times[c_1,c_2)$ の総和は
+$$
+s[r_2][c_2]-s[r_1][c_2]-s[r_2][c_1]+s[r_1][c_1]
+$$
+で求められる。
+
+```python
+a = [
+    [1, 2, 3],
+    [4, 5, 6]
+]
+
+h, w = len(a), len(a[0])
+
+s = [[0] * (w + 1) for _ in range(h + 1)]
+
+for i in range(h):
+    for j in range(w):
+        s[i + 1][j + 1] = (
+            a[i][j]
+            + s[i][j + 1]
+            + s[i + 1][j]
+            - s[i][j]
+        )
+
+# [r1, r2) × [c1, c2)
+def rect_sum(r1: int, c1: int, r2: int, c2: int) -> int:
+    return (
+        s[r2][c2]
+        - s[r1][c2]
+        - s[r2][c1]
+        + s[r1][c1]
+    )
+
+print(rect_sum(0, 1, 2, 3))  # 16
+```
+
+## n次元累積和
+
+2次元累積和をさらに一般化する。
+$d$ 次元配列の各軸の長さを $n_1,n_2,\ldots,n_d$ とする。
+全要素数は
+$$
+N=\prod_{k=1}^{d}n_k
+$$
+
+各軸について順番に累積和を取れば、$d$ 次元累積和を構築できる。
+例えば3次元なら、まず第1軸方向に累積和を取り、その結果に対して第2軸、さらに第3軸方向に累積和を取ればよい。
+**各軸の処理は独立しており、処理順序は問わない。**
+
+- 包除原理による領域和の取得
+1次元では、$[l,r)$ の和を求めるために
+$$
+S(r)-S(l)
+$$
+を計算する。
+2次元では4項、3次元では8項の加減算が必要になる。
+
+一般に$d$次元では、各軸について「右端」と「左端」の2通りを選び、$2^d$ 個の項を足し引きすればよい。
+
+累積和を
+$$
+S(x_1,\ldots,x_d)
+=
+\sum_{0\le i_1<x_1}\cdots
+\sum_{0\le i_d<x_d}
+A(i_1,\ldots,i_d)
+$$
+と定義する。
+
+領域 $[l_1,r_1)\times\cdots\times[l_d,r_d)$ の和は
+
+$$
+\boxed{
+\sum_{\varepsilon\in\{0,1\}^d}
+(-1)^{\sum_{k=1}^{d}\varepsilon_k}
+S(x_1,\ldots,x_d)
+}
+$$
+ただし、
+$$
+x_k=
+\begin{cases}
+r_k & (\varepsilon_k=0)\\
+l_k & (\varepsilon_k=1)
+\end{cases}
+$$
+である。
+つまり、左端を選んだ軸の数が偶数なら加算、奇数なら減算する。
+
+- 実装
+多次元配列を1次元配列に平坦化して保持する。
+各軸の長さを `shape` に指定することで、次元数を変えずに同じ実装を利用できる。
+余分な境界領域を確保せず、元の配列と同じ要素数で累積和を保持する。
+
+```python
+class PrefixSumND:
+    def __init__(self, a: list[int], shape: list[int]):
+        self.d = len(shape)
+
+        # 各軸のストライド
+        self.strides = [1] * self.d
+        for k in range(self.d - 2, -1, -1):
+            self.strides[k] = self.strides[k + 1] * shape[k + 1]
+
+        # 元の配列をコピー
+        self.data = a[:]
+
+        # 各軸に沿って累積和を取る
+        for axis in range(self.d):
+            step = self.strides[axis]
+            width = shape[axis]
+
+            for idx in range(len(a)):
+                if (idx // step) % width != 0:
+                    self.data[idx] += self.data[idx - step]
+
+    # 各軸の半開区間 [l[i], r[i]) の直積
+    def sum(self, l: list[int], r: list[int]) -> int:
+        corners = [(0, 1)]
+
+        for axis in range(self.d):
+            if l[axis] == r[axis]:
+                return 0
+
+            step = self.strides[axis]
+            nxt = []
+
+            for idx, sign in corners:
+                # 右端を選ぶ
+                if r[axis] > 0:
+                    nxt.append((
+                        idx + (r[axis] - 1) * step,
+                        sign
+                    ))
+
+                # 左端を選ぶ（符号反転）
+                if l[axis] > 0:
+                    nxt.append((
+                        idx + (l[axis] - 1) * step,
+                        -sign
+                    ))
+
+            corners = nxt
+
+        ans = 0
+        for idx, sign in corners:
+            ans += sign * self.data[idx]
+
+        return ans
+```
+
+`a` は最後の軸が最も速く変化する順序で平坦化した配列とする。
+
+`shape` の各要素は正であり、その積が `len(a)` に一致することを前提とする。また、問い合わせは各軸で $0\le l_i\le r_i\le n_i$ を満たすものとする。
+
+内部では各座標を含む累積和を保持しているため、問い合わせ時には各端点から1を引く。負の添字になる項は0として扱い、列挙しない。
+
+**使用例**
+
+```python
+# 2次元
+# [[1, 2, 3],
+#  [4, 5, 6]]
+
+ps = PrefixSumND([1, 2, 3, 4, 5, 6], [2, 3])
+
+print(ps.sum([0, 1], [2, 3]))  # 16
+
+
+# 3次元 (2×2×2)
+ps3 = PrefixSumND(list(range(1, 9)), [2, 2, 2])
+
+print(ps3.sum([0, 0, 1], [2, 2, 2]))  # 20
+```
+
+| 操作 | 計算量 |
+|---|---|
+| 構築 | $O(dN)$ |
+| 領域和取得 | $O(2^d)$ |
+| 累積和配列 | $O(N)$ |
+| 軸情報 | $O(d)$ |
+| 問い合わせ時の一時領域 | $O(2^d)$ |
+
+次元数が増えると問い合わせの計算量は指数的に増加するが、競技プログラミングで扱う2〜4次元程度なら十分実用的。
+
+なお、**次元数が固定されている場合は、専用の多次元配列を使った実装のほうが単純で高速になることも多い。**
+
+また、累積和は構築後の値の変更には適していない。更新を伴う場合はBITやセグメント木などを検討する。
+
 ## 最長増加部分列（LIS）
 
 DPで解ける
